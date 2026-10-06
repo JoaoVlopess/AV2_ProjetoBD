@@ -1,0 +1,19 @@
+@if (transportError) {
+  <section class="message error" role="alert">{{ transportError }}</section>
+} @else if (valid === true) {
+  <section class="message success" role="status">Consulta válida.</section>
+} @else if (errors.length) {
+  <section class="message error" role="alert">
+    <strong>A consulta possui erro:</strong>
+    <ul>
+      @for (error of errors; track $index) {
+        <li>
+          {{ error.message }}
+          @if (error.position !== null) {
+            <span>(posição {{ error.position }})</span>
+          }
+        </li>
+      }
+    </ul>
+  </section>
+}

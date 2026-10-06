@@ -1,0 +1,25 @@
+@if (response) {
+  <section class="result-grid">
+    <article class="panel">
+      <h2>Tokens</h2>
+      @if (response.tokens.length) {
+        <div class="tokens">
+          @for (token of response.tokens; track $index) {
+            <code>{{ token }}</code>
+          }
+        </div>
+      } @else {
+        <p>Nenhum token disponível.</p>
+      }
+    </article>
+
+    <article class="panel">
+      <h2>Consulta estruturada</h2>
+      @if (response.query) {
+        <pre>{{ response.query | json }}</pre>
+      } @else {
+        <p>A consulta ainda não produziu uma estrutura válida.</p>
+      }
+    </article>
+  </section>
+}

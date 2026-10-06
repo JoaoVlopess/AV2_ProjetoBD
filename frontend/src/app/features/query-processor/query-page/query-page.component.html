@@ -1,0 +1,25 @@
+<main class="page-shell">
+  <header class="page-header">
+    <p class="eyebrow">Banco de Dados · Processador de Consultas</p>
+    <h1>Analisador SQL</h1>
+    <p>
+      Informe uma consulta do subconjunto permitido para visualizar os tokens,
+      a estrutura reconhecida e os erros de validação.
+    </p>
+  </header>
+
+  <app-query-editor
+    [loading]="loading"
+    (analyzeQuery)="analyze($event)"
+    (clearQuery)="clear()"
+  />
+
+  <app-validation-messages
+    [errors]="response?.errors ?? []"
+    [transportError]="transportError"
+    [valid]="response?.valid ?? null"
+  />
+
+  <app-parse-result [response]="response" />
+  <app-graph-viewer [graph]="response?.graph ?? null" />
+</main>

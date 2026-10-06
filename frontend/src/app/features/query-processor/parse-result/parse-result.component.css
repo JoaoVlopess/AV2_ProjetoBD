@@ -1,0 +1,38 @@
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.panel {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid #dce2ec;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+h2 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.tokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+code {
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: #eef2ff;
+  color: #243b87;
+}
+
+pre {
+  overflow: auto;
+  margin: 0;
+  font-size: 0.85rem;
+}

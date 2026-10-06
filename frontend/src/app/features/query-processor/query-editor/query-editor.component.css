@@ -1,0 +1,62 @@
+.panel {
+  padding: 24px;
+  border: 1px solid #dce2ec;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgb(23 32 51 / 7%);
+}
+
+label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 16px;
+  border: 1px solid #bdc7d6;
+  border-radius: 10px;
+  background: #101827;
+  color: #e7eef9;
+  font-family: "Cascadia Code", Consolas, monospace;
+  line-height: 1.6;
+}
+
+textarea:focus {
+  outline: 3px solid rgb(49 98 255 / 18%);
+  border-color: #3162ff;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+button {
+  padding: 10px 18px;
+  border: 1px solid #bdc7d6;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #172033;
+  font-weight: 700;
+}
+
+button.primary {
+  border-color: #3162ff;
+  background: #3162ff;
+  color: #ffffff;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.field-error {
+  margin: 8px 0 0;
+  color: #b42318;
+  font-size: 0.9rem;
+}

@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+pytest-cache-files-*/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+venv/
+.venv/
+
+# Angular / Node
+node_modules/
+.angular/
+frontend/dist/
+frontend/coverage/
+npm-debug.log*
+
+# Build Angular servido pelo FastAPI
+backend/app/static/*
+!backend/app/static/.gitkeep
+
+# IDE e sistema operacional
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Variáveis locais
+.env
+.env.*
+!.env.example

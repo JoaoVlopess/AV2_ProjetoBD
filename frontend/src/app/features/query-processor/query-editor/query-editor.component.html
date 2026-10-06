@@ -1,0 +1,21 @@
+<section class="panel">
+  <label for="sql-input">Consulta SQL</label>
+  <textarea
+    id="sql-input"
+    rows="9"
+    spellcheck="false"
+    [formControl]="sqlControl"
+    placeholder="SELECT Nome, Email FROM Cliente;"
+  ></textarea>
+
+  @if (sqlControl.touched && sqlControl.invalid) {
+    <p class="field-error">Informe uma consulta antes de analisar.</p>
+  }
+
+  <div class="actions">
+    <button class="primary" type="button" [disabled]="loading" (click)="submit()">
+      {{ loading ? 'Analisando…' : 'Analisar' }}
+    </button>
+    <button type="button" [disabled]="loading" (click)="clear()">Limpar</button>
+  </div>
+</section>
