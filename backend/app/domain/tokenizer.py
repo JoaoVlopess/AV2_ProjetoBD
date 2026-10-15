@@ -1,6 +1,8 @@
 """Análise léxica da string SQL."""
 
 import re
+
+from backend.app.domain.errors import QueryLexicalError
 from backend.app.domain.tokens import Token, TokenType
 
 
@@ -70,8 +72,9 @@ class Tokenizer:
 
             if skipped.strip():
                 invalid_position = cursor + len(skipped) - len(skipped.lstrip())
-                raise ValueError(
-                    f"Caractere inesperado na posição {invalid_position}"
+                raise QueryLexicalError(
+                    message=f"Caractere inesperado na posição {invalid_position}.",
+                    position=invalid_position,
                 )
             
             tokens.append(
@@ -87,7 +90,11 @@ class Tokenizer:
         remaining = sql[cursor:]
 
         if remaining.strip():
-            raise ValueError(f"Texto inválido na posição {cursor}")
+            invalid_position = cursor + len(remaining) - len(remaining.lstrip())
+            raise QueryLexicalError(
+                message=f"Texto inválido na posição {invalid_position}.",
+                position=invalid_position,
+            )
         
         tokens.append(
             Token(

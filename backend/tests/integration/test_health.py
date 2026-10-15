@@ -27,5 +27,30 @@ def test_parser_endpoint_has_the_expected_contract() -> None:
     )
 
     assert response.status_code == 200
+    body = response.json()
+    assert body["valid"] is True
+    assert body["query"]["select"] == ["Nome"]
+    assert body["query"]["from"] == "Cliente"
+    assert body["errors"] == []
+
+
+def test_parser_endpoint_returns_semantic_errors() -> None:
+    response = client.post(
+        "/api/v1/queries/parse",
+        json={"sql": "SELECT Telefone FROM Cliente;"},
+    )
+
+    assert response.status_code == 200
     assert response.json()["valid"] is False
-    assert response.json()["errors"][0]["code"] == "NOT_IMPLEMENTED"
+    assert response.json()["errors"][0]["code"] == "UNKNOWN_FIELD"
+
+
+def test_parser_endpoint_returns_syntax_errors() -> None:
+    response = client.post(
+        "/api/v1/queries/parse",
+        json={"sql": "SELECT FROM Cliente;"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["valid"] is False
+    assert response.json()["errors"][0]["code"] == "SYNTAX_ERROR"

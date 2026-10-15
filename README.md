@@ -22,6 +22,8 @@ scripts/             comandos de configuração, build e execução
 
 Consulte [MAPEAMENTO_PRIMEIRA_ENTREGA.md](MAPEAMENTO_PRIMEIRA_ENTREGA.md) para requisitos, decisões arquiteturais e casos de teste.
 
+Consulte [DOCUMENTACAO_TECNICA.md](DOCUMENTACAO_TECNICA.md) para a explicação completa da arquitetura, dos arquivos, das classes, das funções e do fluxo da aplicação.
+
 ## Preparação
 
 No PowerShell, a partir da raiz:
@@ -61,4 +63,4 @@ Set-Location frontend
 npm test
 ```
 
-O endpoint do parser está criado, mas retorna `NOT_IMPLEMENTED` até a implementação do tokenizador, parser e validador.
+O tokenizador, o parser, a validação semântica e a integração com a API estão implementados. A construção e a visualização do grafo pertencem às próximas entregas.
