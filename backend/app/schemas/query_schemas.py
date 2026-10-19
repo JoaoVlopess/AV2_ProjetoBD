@@ -27,4 +27,5 @@ class ParseQueryResponse(BaseModel):
     tokens: list[str] = Field(default_factory=list)
     query: ParsedQuery | None = None
     errors: list[ApiError] = Field(default_factory=list)
+    algebra: str | None = None
     graph: dict[str, Any] | None = None

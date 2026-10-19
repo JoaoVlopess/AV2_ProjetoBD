@@ -9,17 +9,17 @@
   </header>
 
   <app-query-editor
-    [loading]="loading"
+    [loading]="loading()"
     (analyzeQuery)="analyze($event)"
     (clearQuery)="clear()"
   />
 
   <app-validation-messages
-    [errors]="response?.errors ?? []"
-    [transportError]="transportError"
-    [valid]="response?.valid ?? null"
+    [errors]="response()?.errors ?? []"
+    [transportError]="transportError()"
+    [valid]="response()?.valid ?? null"
   />
 
-  <app-parse-result [response]="response" />
-  <app-graph-viewer [graph]="response?.graph ?? null" />
+  <app-parse-result [response]="response()" />
+  <app-graph-viewer [graph]="response()?.graph ?? null" />
 </main>

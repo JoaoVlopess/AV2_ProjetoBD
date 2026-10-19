@@ -31,6 +31,19 @@ code {
   color: #243b87;
 }
 
+.algebra-panel {
+  grid-column: 1 / -1;
+}
+
+.algebra-expression {
+  display: block;
+  overflow-x: auto;
+  padding: 16px;
+  font-size: 1rem;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
 pre {
   overflow: auto;
   margin: 0;

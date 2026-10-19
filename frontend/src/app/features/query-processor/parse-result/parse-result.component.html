@@ -21,5 +21,14 @@
         <p>A consulta ainda não produziu uma estrutura válida.</p>
       }
     </article>
+
+    <article class="panel algebra-panel">
+      <h2>Álgebra relacional não otimizada</h2>
+      @if (response.algebra) {
+        <code class="algebra-expression">{{ response.algebra }}</code>
+      } @else {
+        <p>A álgebra será exibida quando a consulta for válida.</p>
+      }
+    </article>
   </section>
 }

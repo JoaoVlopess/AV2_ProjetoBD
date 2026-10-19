@@ -1,6 +1,6 @@
 # Processador de Consultas
 
-Monólito modular para analisar um subconjunto de SQL, validar tabelas e campos e, nas próximas etapas, construir e visualizar o grafo de operadores.
+Monólito modular para analisar um subconjunto de SQL, validar tabelas e campos, gerar a álgebra relacional e visualizar o grafo de operadores.
 
 ## Tecnologias
 
@@ -63,4 +63,4 @@ Set-Location frontend
 npm test
 ```
 
-O tokenizador, o parser, a validação semântica e a integração com a API estão implementados. A construção e a visualização do grafo pertencem às próximas entregas.
+O tokenizador, o parser, a validação semântica, a álgebra relacional e a construção e visualização do grafo estão implementados.

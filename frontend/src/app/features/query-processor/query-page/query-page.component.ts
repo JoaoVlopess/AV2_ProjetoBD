@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs';
 
 import { QueryApiService } from '../../../core/services/query-api.service';
@@ -23,29 +23,30 @@ import { ValidationMessagesComponent } from '../validation-messages/validation-m
 export class QueryPageComponent {
   private readonly queryApi = inject(QueryApiService);
 
-  loading = false;
-  response: QueryAnalysisResponse | null = null;
-  transportError = '';
+  readonly loading = signal(false);
+  readonly response = signal<QueryAnalysisResponse | null>(null);
+  readonly transportError = signal('');
 
   analyze(sql: string): void {
-    this.loading = true;
-    this.response = null;
-    this.transportError = '';
+    this.loading.set(true);
+    this.response.set(null);
+    this.transportError.set('');
 
     this.queryApi
       .analyze(sql)
-      .pipe(finalize(() => (this.loading = false)))
+      .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: (response) => (this.response = response),
+        next: (response) => this.response.set(response),
         error: () => {
-          this.transportError =
-            'Não foi possível comunicar com o backend. Confirme se o FastAPI está ativo.';
+          this.transportError.set(
+            'Não foi possível comunicar com o backend. Confirme se o FastAPI está ativo.',
+          );
         },
       });
   }
 
   clear(): void {
-    this.response = null;
-    this.transportError = '';
+    this.response.set(null);
+    this.transportError.set('');
   }
 }

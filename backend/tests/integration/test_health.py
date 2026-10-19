@@ -31,6 +31,10 @@ def test_parser_endpoint_has_the_expected_contract() -> None:
     assert body["valid"] is True
     assert body["query"]["select"] == ["Nome"]
     assert body["query"]["from"] == "Cliente"
+    assert body["algebra"] == "π[Nome](Cliente)"
+    assert body["graph"]["directed"] is True
+    assert len(body["graph"]["elements"]["nodes"]) == 2
+    assert len(body["graph"]["elements"]["edges"]) == 1
     assert body["errors"] == []
 
 
@@ -43,6 +47,8 @@ def test_parser_endpoint_returns_semantic_errors() -> None:
     assert response.status_code == 200
     assert response.json()["valid"] is False
     assert response.json()["errors"][0]["code"] == "UNKNOWN_FIELD"
+    assert response.json()["algebra"] is None
+    assert response.json()["graph"] is None
 
 
 def test_parser_endpoint_returns_syntax_errors() -> None:

@@ -14,4 +14,5 @@ class QueryAnalysisResult:
     tokens: list[Token] = field(default_factory=list)
     query: Query | None = None
     errors: list[QueryError] = field(default_factory=list)
+    algebra: str | None = None
     graph: dict[str, Any] | None = None

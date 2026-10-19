@@ -1,7 +1,7 @@
 .panel {
   margin-top: 16px;
   padding: 20px;
-  border: 1px dashed #aeb9ca;
+  border: 1px solid #dce2ec;
   border-radius: 14px;
   background: #f9fbff;
 }
@@ -11,8 +11,55 @@ h2 {
   font-size: 1rem;
 }
 
+.graph-container {
+  width: 100%;
+  height: 520px;
+  border: 1px solid #dce2ec;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.legend span {
+  padding: 5px 10px;
+  border: 2px solid;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.relation {
+  border-color: #0284c7;
+  background: #e0f2fe;
+}
+
+.join {
+  border-color: #d97706;
+  background: #fef3c7;
+}
+
+.selection {
+  border-color: #16a34a;
+  background: #dcfce7;
+}
+
+.projection {
+  border-color: #7c3aed;
+  background: #ede9fe;
+}
+
 p,
-.graph-placeholder {
+.hint {
   margin-bottom: 0;
   color: #61708a;
+}
+
+.hint {
+  margin-top: 10px;
+  font-size: 0.85rem;
 }

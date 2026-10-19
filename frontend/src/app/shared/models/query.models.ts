@@ -45,5 +45,6 @@ export interface QueryAnalysisResponse {
   tokens: string[];
   query: ParsedQuery | null;
   errors: QueryError[];
+  algebra: string | null;
   graph: GraphData | null;
 }

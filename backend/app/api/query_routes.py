@@ -52,6 +52,7 @@ async def parse_query(payload: ParseQueryRequest) -> ParseQueryResponse:
             ApiError(code=error.code, message=error.message, position=error.position)
             for error in result.errors
         ],
+        algebra=result.algebra,
         graph=result.graph,
     )
 
