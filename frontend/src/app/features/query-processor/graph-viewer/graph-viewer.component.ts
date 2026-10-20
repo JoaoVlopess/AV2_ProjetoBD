@@ -65,6 +65,7 @@ export class GraphViewerComponent implements OnChanges, OnDestroy {
       layout: {
         name: 'breadthfirst',
         directed: true,
+        direction: 'upward',
         padding: 30,
         spacingFactor: 1.35,
       },
