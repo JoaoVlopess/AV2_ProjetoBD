@@ -6,7 +6,7 @@ from typing import Iterator
 import networkx as nx
 
 from backend.app.domain.relational_algebra import (
-    JoinOperation,
+    CartesianProduct,
     Projection,
     Relation,
     RelationalAlgebraFormatter,
@@ -53,13 +53,12 @@ class GraphBuilder:
             )
             return node_id
 
-        if isinstance(node, JoinOperation):
-            condition = formatter.format_expression(node.condition)
+        if isinstance(node, CartesianProduct):
             graph.add_node(
                 node_id,
-                kind="join",
-                label=f"⋈ JOIN\n{condition}",
-                detail=condition,
+                kind="product",
+                label="×",
+                detail="Produto cartesiano",
             )
             left_id = self._add_node(
                 graph, node.left, node_ids, edge_ids, formatter
@@ -76,7 +75,8 @@ class GraphBuilder:
             graph.add_node(
                 node_id,
                 kind="selection",
-                label=f"σ WHERE\n{condition}",
+                label=f"σ {node.clause}\n{condition}",
+                clause=node.clause,
                 detail=condition,
             )
             source_id = self._add_node(

@@ -64,8 +64,12 @@ export class GraphViewerComponent implements OnChanges, OnDestroy {
       wheelSensitivity: 0.2,
       layout: {
         name: 'breadthfirst',
-        directed: true,
-        direction: 'upward',
+        // Organiza a árvore a partir da projeção, preservando as setas de fluxo.
+        directed: false,
+        roots: this.graph.elements.nodes
+          .filter((node) => node.data['kind'] === 'projection')
+          .map((node) => node.data.id),
+        direction: 'downward',
         padding: 30,
         spacingFactor: 1.35,
       },
@@ -98,7 +102,7 @@ export class GraphViewerComponent implements OnChanges, OnDestroy {
           },
         },
         {
-          selector: 'node[kind = "join"]',
+          selector: 'node[kind = "product"]',
           style: {
             'background-color': '#fef3c7',
             'border-color': '#d97706',

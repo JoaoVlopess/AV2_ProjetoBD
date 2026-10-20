@@ -1,7 +1,7 @@
 from backend.app.domain.ast_models import Comparison, FieldReference, Literal
 from backend.app.domain.parser import Parser
 from backend.app.domain.relational_algebra import (
-    JoinOperation,
+    CartesianProduct,
     Projection,
     Relation,
     RelationalAlgebraConverter,
@@ -49,9 +49,18 @@ def test_converts_join_and_where_in_sql_order() -> None:
 
     assert isinstance(plan, Projection)
     assert isinstance(plan.source, Selection)
-    assert isinstance(plan.source.source, JoinOperation)
-    assert plan.source.source.left == Relation(table="Cliente")
-    assert plan.source.source.right == Relation(table="Pedido")
+    assert plan.source.clause == "WHERE"
+    on = plan.source.source
+    assert isinstance(on, Selection)
+    assert on.clause == "ON"
+    assert on.condition == Comparison(
+        left=FieldReference(name="idCliente", table="Cliente"),
+        operator="=",
+        right=FieldReference(name="Cliente_idCliente", table="Pedido"),
+    )
+    assert isinstance(on.source, CartesianProduct)
+    assert on.source.left == Relation(table="Cliente")
+    assert on.source.right == Relation(table="Pedido")
 
 
 def test_formats_relational_algebra() -> None:
@@ -59,4 +68,16 @@ def test_formats_relational_algebra() -> None:
 
     assert RelationalAlgebraFormatter().format(plan) == (
         "π[Nome](σ[idCliente >= 10](Cliente))"
+    )
+
+
+def test_formats_join_with_primitive_operators() -> None:
+    plan = convert(
+        "SELECT Cliente.Nome FROM Cliente INNER JOIN Pedido "
+        "ON Cliente.idCliente = Pedido.Cliente_idCliente "
+        "WHERE Pedido.ValorTotalPedido >= 100;"
+    )
+    assert RelationalAlgebraFormatter().format(plan) == (
+        "π[Cliente.Nome](σ[Pedido.ValorTotalPedido >= 100]("
+        "σ[Cliente.idCliente = Pedido.Cliente_idCliente]((Cliente × Pedido))))"
     )

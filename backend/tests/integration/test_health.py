@@ -60,3 +60,25 @@ def test_parser_endpoint_returns_syntax_errors() -> None:
     assert response.status_code == 200
     assert response.json()["valid"] is False
     assert response.json()["errors"][0]["code"] == "SYNTAX_ERROR"
+
+
+def test_parser_endpoint_returns_only_primitive_algebra_for_joins() -> None:
+    response = client.post(
+        "/api/v1/queries/parse",
+        json={"sql": (
+            "SELECT Cliente.Nome FROM Cliente "
+            "INNER JOIN Pedido ON Cliente.idCliente = Pedido.Cliente_idCliente "
+            "INNER JOIN Status ON Pedido.Status_idStatus = Status.idStatus "
+            "WHERE Pedido.ValorTotalPedido >= 100;"
+        )},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["valid"] is True
+    assert "⋈" not in body["algebra"]
+    assert body["algebra"].count("×") == 2
+    nodes = [node["data"] for node in body["graph"]["elements"]["nodes"]]
+    assert sum(node["kind"] == "product" for node in nodes) == 2
+    assert sum(node.get("clause") == "ON" for node in nodes) == 2
+    assert sum(node.get("clause") == "WHERE" for node in nodes) == 1
+    assert all(node["kind"] != "join" and "⋈" not in node["label"] for node in nodes)
