@@ -24,20 +24,20 @@ class Relation:
 
 
 @dataclass(frozen=True, slots=True)
-class JoinOperation:
-    """Junção entre dois resultados relacionais."""
+class CartesianProduct:
+    """Produto cartesiano de dois resultados relacionais."""
 
     left: RelationalNode
     right: RelationalNode
-    condition: Expression
 
 
 @dataclass(frozen=True, slots=True)
 class Selection:
-    """Filtro criado a partir da cláusula WHERE."""
+    """Filtro criado a partir de uma condição ON ou WHERE."""
 
     source: RelationalNode
     condition: Expression
+    clause: str = "WHERE"
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,7 +48,7 @@ class Projection:
     fields: list[FieldReference]
 
 
-RelationalNode: TypeAlias = Relation | JoinOperation | Selection | Projection
+RelationalNode: TypeAlias = Relation | CartesianProduct | Selection | Projection
 
 
 class RelationalAlgebraConverter:
@@ -58,11 +58,11 @@ class RelationalAlgebraConverter:
         current: RelationalNode = Relation(table=query.from_table)
 
         for join in query.joins:
-            current = JoinOperation(
+            product = CartesianProduct(
                 left=current,
                 right=Relation(table=join.table),
-                condition=join.condition,
             )
+            current = Selection(source=product, condition=join.condition, clause="ON")
 
         if query.where is not None:
             current = Selection(source=current, condition=query.where)
@@ -77,11 +77,10 @@ class RelationalAlgebraFormatter:
         if isinstance(node, Relation):
             return node.table
 
-        if isinstance(node, JoinOperation):
+        if isinstance(node, CartesianProduct):
             left = self.format(node.left)
             right = self.format(node.right)
-            condition = self.format_expression(node.condition)
-            return f"({left} ⋈[{condition}] {right})"
+            return f"({left} × {right})"
 
         if isinstance(node, Selection):
             condition = self.format_expression(node.condition)

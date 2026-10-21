@@ -1,7 +1,7 @@
 from backend.app.domain.ast_models import Comparison, FieldReference, Literal
 from backend.app.domain.parser import Parser
 from backend.app.domain.relational_algebra import (
-    JoinOperation,
+    CartesianProduct,
     Projection,
     Relation,
     RelationalAlgebraConverter,
@@ -30,10 +30,12 @@ def test_pushes_each_selection_to_its_relation() -> None:
     )
 
     assert isinstance(plan, Projection)
-    assert isinstance(plan.source, JoinOperation)
+    assert isinstance(plan.source, Selection)
+    assert plan.source.clause == "ON"
+    assert isinstance(plan.source.source, CartesianProduct)
 
-    left = plan.source.left
-    right = plan.source.right
+    left = plan.source.source.left
+    right = plan.source.source.right
 
     assert isinstance(left, Projection)
     assert isinstance(left.source, Selection)
@@ -62,21 +64,22 @@ def test_early_projections_keep_only_required_fields() -> None:
     )
 
     assert isinstance(plan, Projection)
-    assert isinstance(plan.source, JoinOperation)
-    assert isinstance(plan.source.left, Projection)
-    assert isinstance(plan.source.right, Projection)
+    assert isinstance(plan.source, Selection)
+    assert isinstance(plan.source.source, CartesianProduct)
+    assert isinstance(plan.source.source.left, Projection)
+    assert isinstance(plan.source.source.right, Projection)
 
-    assert plan.source.left.fields == [
+    assert plan.source.source.left.fields == [
         FieldReference(name="idCliente", table="Cliente"),
         FieldReference(name="Nome", table="Cliente"),
     ]
-    assert plan.source.right.fields == [
+    assert plan.source.source.right.fields == [
         FieldReference(name="idPedido", table="Pedido"),
         FieldReference(name="Cliente_idCliente", table="Pedido"),
     ]
 
 
-def test_keeps_condition_between_tables_above_join() -> None:
+def test_does_not_push_condition_between_tables_into_one_relation() -> None:
     plan = optimize(
         "SELECT Cliente.Nome FROM Cliente "
         "INNER JOIN Pedido "
@@ -86,7 +89,10 @@ def test_keeps_condition_between_tables_above_join() -> None:
 
     assert isinstance(plan, Projection)
     assert isinstance(plan.source, Selection)
-    assert isinstance(plan.source.source, JoinOperation)
+    assert plan.source.clause == "ON"
+    assert isinstance(plan.source.source, Selection)
+    assert plan.source.source.clause == "WHERE"
+    assert isinstance(plan.source.source.source, CartesianProduct)
 
 
 def test_single_table_plan_does_not_add_redundant_projection() -> None:

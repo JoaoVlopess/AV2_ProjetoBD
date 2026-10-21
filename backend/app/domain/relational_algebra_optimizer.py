@@ -9,7 +9,7 @@ from backend.app.domain.ast_models import (
     FieldReference,
 )
 from backend.app.domain.relational_algebra import (
-    JoinOperation,
+    CartesianProduct,
     Projection,
     Relation,
     RelationalNode,
@@ -44,15 +44,24 @@ class RelationalAlgebraOptimizer:
     def _push_selections(self, node: RelationalNode) -> RelationalNode:
         if isinstance(node, Selection):
             source = self._push_selections(node.source)
+
+            # A seleção do ON representa a junção primitiva e deve
+            # continuar imediatamente acima do produto cartesiano.
+            if node.clause == "ON":
+                return Selection(
+                    source=source,
+                    condition=node.condition,
+                    clause="ON",
+                )
+
             for condition in self._split_and(node.condition):
                 source = self._push_condition(source, condition)
             return source
 
-        if isinstance(node, JoinOperation):
-            return JoinOperation(
+        if isinstance(node, CartesianProduct):
+            return CartesianProduct(
                 left=self._push_selections(node.left),
                 right=self._push_selections(node.right),
-                condition=node.condition,
             )
 
         if isinstance(node, Projection):
@@ -68,23 +77,21 @@ class RelationalAlgebraOptimizer:
         node: RelationalNode,
         condition: Expression,
     ) -> RelationalNode:
-        if isinstance(node, JoinOperation):
+        if isinstance(node, CartesianProduct):
             condition_tables = self._expression_tables(condition)
             left_tables = self._relation_names(node.left)
             right_tables = self._relation_names(node.right)
 
             if condition_tables and condition_tables <= left_tables:
-                return JoinOperation(
+                return CartesianProduct(
                     left=self._push_condition(node.left, condition),
                     right=node.right,
-                    condition=node.condition,
                 )
 
             if condition_tables and condition_tables <= right_tables:
-                return JoinOperation(
+                return CartesianProduct(
                     left=node.left,
                     right=self._push_condition(node.right, condition),
-                    condition=node.condition,
                 )
 
             return Selection(source=node, condition=condition)
@@ -93,6 +100,7 @@ class RelationalAlgebraOptimizer:
             return Selection(
                 source=self._push_condition(node.source, condition),
                 condition=node.condition,
+                clause=node.clause,
             )
 
         if isinstance(node, Projection):
@@ -121,8 +129,7 @@ class RelationalAlgebraOptimizer:
         node: RelationalNode,
         required: set[ResolvedField],
     ) -> None:
-        if isinstance(node, JoinOperation):
-            self._add_expression_fields(required, node.condition)
+        if isinstance(node, CartesianProduct):
             self._collect_operation_fields(node.left, required)
             self._collect_operation_fields(node.right, required)
             return
@@ -130,7 +137,10 @@ class RelationalAlgebraOptimizer:
         if isinstance(node, Selection):
             # Uma seleção sobre uma única tabela usa seus campos antes da
             # projeção local. Eles não precisam seguir para os joins superiores.
-            if len(self._relation_names(node.source)) > 1:
+            if (
+                node.clause == "ON"
+                or len(self._relation_names(node.source)) > 1
+            ):
                 self._add_expression_fields(required, node.condition)
             self._collect_operation_fields(node.source, required)
             return
@@ -157,17 +167,17 @@ class RelationalAlgebraOptimizer:
                 return Projection(source=node, fields=fields)
             return node
 
-        if isinstance(node, JoinOperation):
-            return JoinOperation(
+        if isinstance(node, CartesianProduct):
+            return CartesianProduct(
                 left=self._insert_projections(node.left, required),
                 right=self._insert_projections(node.right, required),
-                condition=node.condition,
             )
 
         if isinstance(node, Selection):
             return Selection(
                 source=self._insert_projections(node.source, required),
                 condition=node.condition,
+                clause=node.clause,
             )
 
         if isinstance(node, Projection):
@@ -240,7 +250,7 @@ class RelationalAlgebraOptimizer:
     def _relation_names(self, node: RelationalNode) -> set[str]:
         if isinstance(node, Relation):
             return {node.table}
-        if isinstance(node, JoinOperation):
+        if isinstance(node, CartesianProduct):
             return self._relation_names(node.left) | self._relation_names(
                 node.right
             )
