@@ -21,5 +21,12 @@
   />
 
   <app-parse-result [response]="response()" />
-  <app-graph-viewer [graph]="response()?.graph ?? null" />
+  <app-graph-viewer
+    title="Grafo de operadores não otimizado"
+    [graph]="response()?.graph ?? null"
+  />
+  <app-graph-viewer
+    title="Grafo de operadores otimizado"
+    [graph]="response()?.optimized_graph ?? null"
+  />
 </main>

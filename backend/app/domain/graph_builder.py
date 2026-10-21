@@ -76,7 +76,7 @@ class GraphBuilder:
             graph.add_node(
                 node_id,
                 kind="selection",
-                label=f"σ WHERE\n{condition}",
+                label=f"σ SELEÇÃO (WHERE)\n{condition}",
                 detail=condition,
             )
             source_id = self._add_node(
@@ -91,7 +91,7 @@ class GraphBuilder:
         graph.add_node(
             node_id,
             kind="projection",
-            label=f"π SELECT\n{fields}",
+            label=f"π PROJEÇÃO (SELECT)\n{fields}",
             detail=fields,
         )
         source_id = self._add_node(

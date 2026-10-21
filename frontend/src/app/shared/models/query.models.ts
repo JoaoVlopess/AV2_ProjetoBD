@@ -47,4 +47,6 @@ export interface QueryAnalysisResponse {
   errors: QueryError[];
   algebra: string | null;
   graph: GraphData | null;
+  optimized_algebra: string | null;
+  optimized_graph: GraphData | null;
 }

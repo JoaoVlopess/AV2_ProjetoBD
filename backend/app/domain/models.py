@@ -16,3 +16,5 @@ class QueryAnalysisResult:
     errors: list[QueryError] = field(default_factory=list)
     algebra: str | None = None
     graph: dict[str, Any] | None = None
+    optimized_algebra: str | None = None
+    optimized_graph: dict[str, Any] | None = None

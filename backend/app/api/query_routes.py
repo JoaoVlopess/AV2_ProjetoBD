@@ -54,6 +54,8 @@ async def parse_query(payload: ParseQueryRequest) -> ParseQueryResponse:
         ],
         algebra=result.algebra,
         graph=result.graph,
+        optimized_algebra=result.optimized_algebra,
+        optimized_graph=result.optimized_graph,
     )
 
 

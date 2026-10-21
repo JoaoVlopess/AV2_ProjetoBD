@@ -19,6 +19,7 @@ import { GraphData } from '../../../shared/models/query.models';
 })
 export class GraphViewerComponent implements OnChanges, OnDestroy {
   @Input() graph: GraphData | null = null;
+  @Input() title = 'Grafo de operadores';
 
   private container?: ElementRef<HTMLDivElement>;
   private cytoscapeGraph?: cytoscape.Core;
