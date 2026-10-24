@@ -63,4 +63,4 @@ Set-Location frontend
 npm test
 ```
 
-O tokenizador, o parser, a validação semântica, a álgebra relacional, as heurísticas de seleção e projeção e a visualização dos grafos estão implementados.
+O tokenizador, o parser, a validação semântica, a álgebra relacional, as heurísticas de seleção, projeção e ordem de junção e a visualização dos grafos estão implementados.

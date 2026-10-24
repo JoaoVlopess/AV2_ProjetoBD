@@ -7,6 +7,7 @@ from backend.app.domain.ast_models import (
     Comparison,
     Expression,
     FieldReference,
+    Literal,
 )
 from backend.app.domain.relational_algebra import (
     CartesianProduct,
@@ -21,7 +22,7 @@ SchemaCatalog = Mapping[str, list[str]]
 
 
 class RelationalAlgebraOptimizer:
-    """Reduz tuplas e atributos o mais perto possível das tabelas."""
+    """Aplica heurísticas de seleção, projeção e ordem de junção."""
 
     def optimize(
         self,
@@ -35,6 +36,7 @@ class RelationalAlgebraOptimizer:
             return self._push_selections(plan)
 
         source = self._push_selections(plan.source)
+        source = self._reorder_joins(source)
         required_fields = self._collect_required_fields(plan.fields, source)
         if len(self._relation_names(source)) > 1:
             source = self._insert_projections(source, required_fields)
@@ -54,7 +56,14 @@ class RelationalAlgebraOptimizer:
                     clause="ON",
                 )
 
-            for condition in self._split_and(node.condition):
+            # Como a inserção é recursiva, a última condição fica
+            # mais perto da tabela. Por isso ordenamos da menos para a mais
+            # restritiva.
+            conditions = sorted(
+                self._split_and(node.condition),
+                key=self._condition_score,
+            )
+            for condition in conditions:
                 source = self._push_condition(source, condition)
             return source
 
@@ -110,6 +119,200 @@ class RelationalAlgebraOptimizer:
             )
 
         return Selection(source=node, condition=condition)
+
+    def _reorder_joins(self, node: RelationalNode) -> RelationalNode:
+        if (
+            isinstance(node, Selection)
+            and node.clause == "ON"
+            and isinstance(node.source, CartesianProduct)
+        ):
+            branches: list[RelationalNode] = []
+            conditions: list[Expression] = []
+            self._flatten_joins(node, branches, conditions)
+
+            reordered_branches = [
+                self._reorder_joins(branch) for branch in branches
+            ]
+            return self._build_join_order(reordered_branches, conditions)
+
+        if isinstance(node, CartesianProduct):
+            return CartesianProduct(
+                left=self._reorder_joins(node.left),
+                right=self._reorder_joins(node.right),
+            )
+
+        if isinstance(node, Selection):
+            return Selection(
+                source=self._reorder_joins(node.source),
+                condition=node.condition,
+                clause=node.clause,
+            )
+
+        if isinstance(node, Projection):
+            return Projection(
+                source=self._reorder_joins(node.source),
+                fields=node.fields,
+            )
+
+        return node
+
+    def _flatten_joins(
+        self,
+        node: RelationalNode,
+        branches: list[RelationalNode],
+        conditions: list[Expression],
+    ) -> None:
+        if (
+            isinstance(node, Selection)
+            and node.clause == "ON"
+            and isinstance(node.source, CartesianProduct)
+        ):
+            self._flatten_joins(node.source.left, branches, conditions)
+            self._flatten_joins(node.source.right, branches, conditions)
+            conditions.append(node.condition)
+            return
+
+        branches.append(node)
+
+    def _build_join_order(
+        self,
+        branches: list[RelationalNode],
+        conditions: list[Expression],
+    ) -> RelationalNode:
+        if not branches:
+            raise ValueError("Não existem relações para ordenar.")
+
+        pending_branches = list(branches)
+        pending_conditions = list(conditions)
+
+        start_index = max(
+            range(len(pending_branches)),
+            key=lambda index: (
+                self._initial_branch_score(
+                    pending_branches[index],
+                    pending_conditions,
+                ),
+                -index,
+            ),
+        )
+        current = pending_branches.pop(start_index)
+
+        while pending_branches:
+            current_tables = self._relation_names(current)
+            options: list[tuple[int, int, int, int]] = []
+
+            for branch_index, branch in enumerate(pending_branches):
+                branch_tables = self._relation_names(branch)
+                available_tables = current_tables | branch_tables
+
+                for condition_index, condition in enumerate(pending_conditions):
+                    condition_tables = self._expression_tables(condition)
+                    connects_both_sides = (
+                        bool(condition_tables & current_tables)
+                        and bool(condition_tables & branch_tables)
+                    )
+
+                    if (
+                        condition_tables <= available_tables
+                        and connects_both_sides
+                    ):
+                        options.append(
+                            (
+                                self._condition_score(condition),
+                                self._branch_restriction_score(branch),
+                                -branch_index,
+                                -condition_index,
+                            )
+                        )
+
+            if options:
+                _, _, negative_branch, negative_condition = max(options)
+                branch_index = -negative_branch
+                condition_index = -negative_condition
+            else:
+                branch_index = max(
+                    range(len(pending_branches)),
+                    key=lambda index: (
+                        self._branch_restriction_score(
+                            pending_branches[index]
+                        ),
+                        -index,
+                    ),
+                )
+                condition_index = 0 if pending_conditions else -1
+
+            branch = pending_branches.pop(branch_index)
+
+            if condition_index >= 0:
+                condition = pending_conditions.pop(condition_index)
+                product = CartesianProduct(left=current, right=branch)
+                current = Selection(
+                    source=product,
+                    condition=condition,
+                    clause="ON",
+                )
+            else:
+                # Só ocorre quando a consulta realmente não oferece um
+                # predicado capaz de conectar as duas relações.
+                current = CartesianProduct(left=current, right=branch)
+
+        for condition in pending_conditions:
+            current = Selection(
+                source=current,
+                condition=condition,
+                clause="ON",
+            )
+
+        return current
+
+    def _initial_branch_score(
+        self,
+        branch: RelationalNode,
+        conditions: list[Expression],
+    ) -> int:
+        branch_tables = self._relation_names(branch)
+        incident_scores = [
+            self._condition_score(condition)
+            for condition in conditions
+            if self._expression_tables(condition) & branch_tables
+        ]
+        join_score = max(incident_scores, default=0)
+
+        # Uma seleção local pesa mais do que o desempate entre junções.
+        return self._branch_restriction_score(branch) * 10 + join_score
+
+    def _branch_restriction_score(self, node: RelationalNode) -> int:
+        if isinstance(node, Selection):
+            own_score = (
+                self._condition_score(node.condition)
+                if node.clause == "WHERE"
+                else 0
+            )
+            return own_score + self._branch_restriction_score(node.source)
+
+        if isinstance(node, Projection):
+            return self._branch_restriction_score(node.source)
+
+        return 0
+
+    def _condition_score(self, expression: Expression) -> int:
+        if isinstance(expression, AndExpression):
+            return self._condition_score(
+                expression.left
+            ) + self._condition_score(expression.right)
+
+        has_literal = isinstance(expression.left, Literal) or isinstance(
+            expression.right,
+            Literal,
+        )
+
+        if expression.operator == "=":
+            return 100 if has_literal else 80
+        if expression.operator in {"<", ">", "<=", ">="}:
+            return 60 if has_literal else 40
+        if expression.operator == "<>":
+            return 20 if has_literal else 10
+        return 0
 
     def _collect_required_fields(
         self,
