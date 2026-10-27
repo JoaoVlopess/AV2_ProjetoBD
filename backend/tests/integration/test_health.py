@@ -20,6 +20,14 @@ def test_schema_catalog_is_available() -> None:
     assert "Cliente" in response.json()
 
 
+def test_default_cardinalities_are_available() -> None:
+    response = client.get("/api/v1/queries/cardinalities")
+
+    assert response.status_code == 200
+    assert response.json()["Cliente"] > 0
+    assert response.json()["Pedido"] > 0
+
+
 def test_parser_endpoint_has_the_expected_contract() -> None:
     response = client.post(
         "/api/v1/queries/parse",
@@ -86,3 +94,32 @@ def test_parser_endpoint_returns_only_primitive_algebra_for_joins() -> None:
     assert sum(node.get("clause") == "ON" for node in nodes) == 2
     assert sum(node.get("clause") == "WHERE" for node in nodes) == 1
     assert all(node["kind"] != "join" and "⋈" not in node["label"] for node in nodes)
+
+
+def test_parser_endpoint_uses_the_received_cardinalities() -> None:
+    response = client.post(
+        "/api/v1/queries/parse",
+        json={
+            "sql": (
+                "SELECT Cliente.Nome, Pedido.idPedido FROM Cliente "
+                "INNER JOIN Pedido "
+                "ON Cliente.idCliente = Pedido.Cliente_idCliente;"
+            ),
+            "table_cardinalities": {
+                "Cliente": 12,
+                "Pedido": 345,
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    nodes = response.json()["optimized_graph"]["elements"]["nodes"]
+    relations = {
+        node["data"]["label"]: node["data"]["cardinality"]
+        for node in nodes
+        if node["data"]["kind"] == "relation"
+    }
+    assert relations == {
+        "Cliente\n12 tuplas": 12,
+        "Pedido\n345 tuplas": 345,
+    }

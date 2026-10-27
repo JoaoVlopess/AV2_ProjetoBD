@@ -2,11 +2,15 @@
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, NonNegativeInt
 
 
 class ParseQueryRequest(BaseModel):
     sql: str = Field(min_length=1, description="Consulta SQL a analisar.")
+    table_cardinalities: dict[str, NonNegativeInt] = Field(
+        default_factory=dict,
+        description="Quantidade estimada de tuplas de cada tabela.",
+    )
 
 
 class ApiError(BaseModel):

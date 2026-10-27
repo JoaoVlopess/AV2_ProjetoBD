@@ -50,11 +50,15 @@ R JOIN S ON condição  =  σ condição (R × S)
 O otimizador aplica as seguintes heurísticas:
 
 - leva as seleções para perto das tabelas correspondentes;
-- executa primeiro as seleções estimadas como mais restritivas;
-- insere projeções antecipadas para remover colunas desnecessárias;
-- começa pelas relações que possuem filtros mais restritivos;
-- reorganiza as junções para aplicar primeiro as condições mais restritivas;
+- insere uma projeção explícita em cada tabela antes dos cruzamentos,
+  preservando somente os campos necessários;
+- começa pela relação com menos tuplas;
+- entre as tabelas conectáveis, adiciona primeiro a que possui menos tuplas;
 - evita produtos cartesianos sem uma seleção `ON` associada quando existe uma condição de junção.
+
+As cardinalidades possuem valores padrão, mas podem ser alteradas no painel
+**Quantidade estimada de tuplas** do frontend antes de cada análise. Operadores
+como `=`, `>`, `<` e `<>` não recebem pesos diferentes na ordenação.
 
 ## Tecnologias
 
@@ -164,7 +168,7 @@ INNER JOIN Status
 WHERE Pedido.ValorTotalPedido >= 100;
 ```
 
-A interface deverá mostrar a validade da consulta, os tokens, a estrutura analisada, a expressão de álgebra relacional e os grafos não otimizado e otimizado.
+A interface deverá mostrar a validade da consulta, os tokens, a estrutura analisada, a expressão de álgebra relacional e os grafos não otimizado e otimizado. Altere as quantidades de `Cliente`, `Pedido` e `Status` no painel para observar a mudança na ordem das folhas do grafo otimizado.
 
 ## Testes
 
@@ -193,6 +197,7 @@ npm run build
 ```text
 POST /api/v1/queries/parse   Analisa e otimiza uma consulta SQL
 GET  /api/v1/queries/schema  Retorna o catálogo de tabelas e campos
+GET  /api/v1/queries/cardinalities  Retorna as cardinalidades padrão
 GET  /api/v1/health          Verifica se o backend está funcionando
 ```
 
@@ -200,7 +205,10 @@ Exemplo de requisição:
 
 ```json
 {
-  "sql": "SELECT Nome FROM Cliente WHERE idCliente >= 10;"
+  "sql": "SELECT Nome FROM Cliente WHERE idCliente >= 10;",
+  "table_cardinalities": {
+    "Cliente": 5000
+  }
 }
 ```
 

@@ -51,3 +51,19 @@ SCHEMA_CATALOG: dict[str, list[str]] = {
         "PrecoUnitario",
     ],
 }
+
+
+# Cardinalidades estimadas usadas pelo otimizador quando o usuário não
+# informa outros valores pela interface.
+DEFAULT_TABLE_CARDINALITIES: dict[str, int] = {
+    "Categoria": 20,
+    "Produto": 10_000,
+    "TipoCliente": 5,
+    "Cliente": 5_000,
+    "TipoEndereco": 3,
+    "Endereco": 7_000,
+    "Telefone": 8_000,
+    "Status": 10,
+    "Pedido": 50_000,
+    "Pedido_has_Produto": 150_000,
+}

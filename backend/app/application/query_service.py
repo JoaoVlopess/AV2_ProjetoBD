@@ -1,5 +1,7 @@
 """Orquestra tokenização, parsing, validação e construção do grafo."""
 
+from collections.abc import Mapping
+
 from networkx.readwrite import json_graph
 
 from backend.app.domain.errors import (
@@ -19,13 +21,30 @@ from backend.app.domain.relational_algebra_optimizer import (
 )
 from backend.app.domain.tokenizer import Tokenizer
 from backend.app.domain.validator import QueryValidator
-from backend.app.infrastructure.schema_catalog import SCHEMA_CATALOG
+from backend.app.infrastructure.schema_catalog import (
+    DEFAULT_TABLE_CARDINALITIES,
+    SCHEMA_CATALOG,
+)
 
 
 class QueryService:
     """Fachada do caso de uso de análise de uma consulta SQL."""
 
-    def analyze(self, sql: str) -> QueryAnalysisResult:
+    def analyze(
+        self,
+        sql: str,
+        table_cardinalities: Mapping[str, int] | None = None,
+    ) -> QueryAnalysisResult:
+        cardinalities = dict(DEFAULT_TABLE_CARDINALITIES)
+        if table_cardinalities is not None:
+            cardinalities.update(
+                {
+                    table: cardinality
+                    for table, cardinality in table_cardinalities.items()
+                    if table in SCHEMA_CATALOG
+                }
+            )
+
         try:
             tokens = Tokenizer().tokenize(sql)
             query = Parser().parse(tokens)
@@ -63,15 +82,19 @@ class QueryService:
             plan = RelationalAlgebraConverter().convert(query)
             formatter = RelationalAlgebraFormatter()
             algebra = formatter.format(plan)
-            graph = GraphBuilder().build(plan)
+            graph = GraphBuilder().build(plan, cardinalities)
             graph_data = json_graph.cytoscape_data(graph)
 
             optimized_plan = RelationalAlgebraOptimizer().optimize(
                 plan,
                 SCHEMA_CATALOG,
+                cardinalities,
             )
             optimized_algebra = formatter.format(optimized_plan)
-            optimized_graph = GraphBuilder().build(optimized_plan)
+            optimized_graph = GraphBuilder().build(
+                optimized_plan,
+                cardinalities,
+            )
             optimized_graph_data = json_graph.cytoscape_data(optimized_graph)
 
         return QueryAnalysisResult(

@@ -1,5 +1,8 @@
+export type TableCardinalities = Record<string, number>;
+
 export interface QueryRequest {
   sql: string;
+  table_cardinalities: TableCardinalities;
 }
 
 export interface QueryError {

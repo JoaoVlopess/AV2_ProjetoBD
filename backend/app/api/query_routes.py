@@ -7,7 +7,10 @@ from fastapi import APIRouter
 from backend.app.application.query_service import QueryService
 from backend.app.domain.ast_models import FieldReference, Query
 from backend.app.domain.tokens import TokenType
-from backend.app.infrastructure.schema_catalog import SCHEMA_CATALOG
+from backend.app.infrastructure.schema_catalog import (
+    DEFAULT_TABLE_CARDINALITIES,
+    SCHEMA_CATALOG,
+)
 from backend.app.schemas.query_schemas import (
     ApiError,
     ParseQueryRequest,
@@ -39,7 +42,7 @@ def _serialize_query(query: Query | None) -> ParsedQuery | None:
 
 @router.post("/parse", response_model=ParseQueryResponse)
 async def parse_query(payload: ParseQueryRequest) -> ParseQueryResponse:
-    result = service.analyze(payload.sql)
+    result = service.analyze(payload.sql, payload.table_cardinalities)
     return ParseQueryResponse(
         valid=result.valid,
         tokens=[
@@ -62,3 +65,9 @@ async def parse_query(payload: ParseQueryRequest) -> ParseQueryResponse:
 @router.get("/schema")
 async def get_schema() -> dict[str, list[str]]:
     return SCHEMA_CATALOG
+
+
+@router.get("/cardinalities")
+async def get_cardinalities() -> dict[str, int]:
+    """Retorna as quantidades padrão de tuplas editáveis no frontend."""
+    return DEFAULT_TABLE_CARDINALITIES

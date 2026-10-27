@@ -1,0 +1,52 @@
+<section class="panel">
+  <details>
+    <summary>
+      <div>
+      <p class="eyebrow">Estatísticas da otimização</p>
+      <h2>Quantidade estimada de tuplas</h2>
+      </div>
+      <span class="chevron" aria-hidden="true"></span>
+    </summary>
+
+    <div class="content">
+      <div class="heading">
+        <p class="description">
+          Altere os valores antes de analisar. O otimizador começa pelas tabelas
+          com menos tuplas e usa essas quantidades para reorganizar as junções.
+        </p>
+        <button
+          type="button"
+          [disabled]="disabled || !tableNames().length"
+          (click)="reset()"
+        >
+          Restaurar padrões
+        </button>
+      </div>
+
+      @if (loadError) {
+        <p class="load-error">{{ loadError }}</p>
+      } @else if (!tableNames().length) {
+        <p class="loading">Carregando tabelas…</p>
+      } @else {
+        <div class="cardinality-list">
+          @for (table of tableNames(); track table) {
+            <label>
+              <span>{{ table }}</span>
+              <div class="input-group">
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  [disabled]="disabled"
+                  [value]="cardinalities[table]"
+                  (change)="updateCardinality(table, $event)"
+                />
+                <small>tuplas</small>
+              </div>
+            </label>
+          }
+        </div>
+      }
+    </div>
+  </details>
+</section>

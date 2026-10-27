@@ -7,7 +7,6 @@ from backend.app.domain.ast_models import (
     Comparison,
     Expression,
     FieldReference,
-    Literal,
 )
 from backend.app.domain.relational_algebra import (
     CartesianProduct,
@@ -28,9 +27,11 @@ class RelationalAlgebraOptimizer:
         self,
         plan: RelationalNode,
         schema: SchemaCatalog,
+        table_cardinalities: Mapping[str, int] | None = None,
     ) -> RelationalNode:
         self.schema = schema
         self.tables = self._relation_names(plan)
+        self.table_cardinalities = dict(table_cardinalities or {})
 
         if not isinstance(plan, Projection):
             return self._push_selections(plan)
@@ -56,14 +57,10 @@ class RelationalAlgebraOptimizer:
                     clause="ON",
                 )
 
-            # Como a inserção é recursiva, a última condição fica
-            # mais perto da tabela. Por isso ordenamos da menos para a mais
-            # restritiva.
-            conditions = sorted(
-                self._split_and(node.condition),
-                key=self._condition_score,
-            )
-            for condition in conditions:
+            # Não atribuímos pesos diferentes a =, >, < ou <>. As condições
+            # mantêm a ordem escrita no WHERE quando lidas de baixo para cima.
+            conditions = self._split_and(node.condition)
+            for condition in reversed(conditions):
                 source = self._push_condition(source, condition)
             return source
 
@@ -185,21 +182,20 @@ class RelationalAlgebraOptimizer:
         pending_branches = list(branches)
         pending_conditions = list(conditions)
 
-        start_index = max(
+        # A relação com menos tuplas inicia o plano. Em caso de empate,
+        # preservamos a ordem original da consulta.
+        start_index = min(
             range(len(pending_branches)),
             key=lambda index: (
-                self._initial_branch_score(
-                    pending_branches[index],
-                    pending_conditions,
-                ),
-                -index,
+                self._estimated_cardinality(pending_branches[index]),
+                index,
             ),
         )
         current = pending_branches.pop(start_index)
 
         while pending_branches:
             current_tables = self._relation_names(current)
-            options: list[tuple[int, int, int, int]] = []
+            options: list[tuple[int, int, int]] = []
 
             for branch_index, branch in enumerate(pending_branches):
                 branch_tables = self._relation_names(branch)
@@ -218,28 +214,25 @@ class RelationalAlgebraOptimizer:
                     ):
                         options.append(
                             (
-                                self._condition_score(condition),
-                                self._branch_restriction_score(branch),
-                                -branch_index,
-                                -condition_index,
+                                self._estimated_cardinality(branch),
+                                branch_index,
+                                condition_index,
                             )
                         )
 
             if options:
-                _, _, negative_branch, negative_condition = max(options)
-                branch_index = -negative_branch
-                condition_index = -negative_condition
+                _, branch_index, condition_index = min(options)
             else:
-                branch_index = max(
+                branch_index = min(
                     range(len(pending_branches)),
                     key=lambda index: (
-                        self._branch_restriction_score(
+                        self._estimated_cardinality(
                             pending_branches[index]
                         ),
-                        -index,
+                        index,
                     ),
                 )
-                condition_index = 0 if pending_conditions else -1
+                condition_index = -1
 
             branch = pending_branches.pop(branch_index)
 
@@ -265,54 +258,19 @@ class RelationalAlgebraOptimizer:
 
         return current
 
-    def _initial_branch_score(
-        self,
-        branch: RelationalNode,
-        conditions: list[Expression],
-    ) -> int:
-        branch_tables = self._relation_names(branch)
-        incident_scores = [
-            self._condition_score(condition)
-            for condition in conditions
-            if self._expression_tables(condition) & branch_tables
-        ]
-        join_score = max(incident_scores, default=0)
+    def _estimated_cardinality(self, node: RelationalNode) -> int:
+        """Estima o tamanho usando somente a quantidade de tuplas informada."""
+        if isinstance(node, Relation):
+            return self.table_cardinalities.get(node.table, 0)
 
-        # Uma seleção local pesa mais do que o desempate entre junções.
-        return self._branch_restriction_score(branch) * 10 + join_score
+        if isinstance(node, CartesianProduct):
+            return self._estimated_cardinality(
+                node.left
+            ) * self._estimated_cardinality(node.right)
 
-    def _branch_restriction_score(self, node: RelationalNode) -> int:
-        if isinstance(node, Selection):
-            own_score = (
-                self._condition_score(node.condition)
-                if node.clause == "WHERE"
-                else 0
-            )
-            return own_score + self._branch_restriction_score(node.source)
-
-        if isinstance(node, Projection):
-            return self._branch_restriction_score(node.source)
-
-        return 0
-
-    def _condition_score(self, expression: Expression) -> int:
-        if isinstance(expression, AndExpression):
-            return self._condition_score(
-                expression.left
-            ) + self._condition_score(expression.right)
-
-        has_literal = isinstance(expression.left, Literal) or isinstance(
-            expression.right,
-            Literal,
-        )
-
-        if expression.operator == "=":
-            return 100 if has_literal else 80
-        if expression.operator in {"<", ">", "<=", ">="}:
-            return 60 if has_literal else 40
-        if expression.operator == "<>":
-            return 20 if has_literal else 10
-        return 0
+        # Sem estatísticas de distribuição, não inventamos pesos para
+        # seleções ou projeções: elas conservam a estimativa da fonte.
+        return self._estimated_cardinality(node.source)
 
     def _collect_required_fields(
         self,
@@ -366,9 +324,11 @@ class RelationalAlgebraOptimizer:
             table = next(iter(node_tables))
             fields = self._projection_fields(table, required)
 
-            if fields and len(fields) < len(self.schema.get(table, [])):
-                return Projection(source=node, fields=fields)
-            return node
+            # Em consultas com mais de uma relação, toda folha recebe um
+            # nó de projeção explícito. Mesmo quando todos os campos da tabela
+            # são necessários, a árvore deixa visível a aplicação da
+            # heurística antes do produto cartesiano.
+            return Projection(source=node, fields=fields)
 
         if isinstance(node, CartesianProduct):
             return CartesianProduct(

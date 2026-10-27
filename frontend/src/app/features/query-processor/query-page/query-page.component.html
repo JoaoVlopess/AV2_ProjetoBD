@@ -8,6 +8,14 @@
     </p>
   </header>
 
+  <app-cardinality-editor
+    [cardinalities]="tableCardinalities()"
+    [defaults]="defaultCardinalities()"
+    [disabled]="loading()"
+    [loadError]="cardinalitiesError()"
+    (cardinalitiesChange)="updateCardinalities($event)"
+  />
+
   <app-query-editor
     [loading]="loading()"
     (analyzeQuery)="analyze($event)"
